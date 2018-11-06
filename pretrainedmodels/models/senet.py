@@ -81,12 +81,21 @@ pretrained_settings = {
     },
 }
 
+class MyAdaptiveAvgPool2d(nn.Module):
+    def __init__(self, sz=None):
+        super(MyAdaptiveAvgPool2d, self).__init__()
+
+    def forward(self, x): 
+        inp_size = x.size()
+        return nn.functional.avg_pool2d(input=x,
+                  kernel_size= (inp_size[2], inp_size[3]))
+
 
 class SEModule(nn.Module):
 
     def __init__(self, channels, reduction):
         super(SEModule, self).__init__()
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.avg_pool = MyAdaptiveAvgPool2d(1)
         self.fc1 = nn.Conv2d(channels, channels // reduction, kernel_size=1,
                              padding=0)
         self.relu = nn.ReLU(inplace=True)
@@ -102,7 +111,6 @@ class SEModule(nn.Module):
         x = self.fc2(x)
         x = self.sigmoid(x)
         return module_input * x
-
 
 class Bottleneck(nn.Module):
     """
@@ -279,7 +287,7 @@ class SENet(nn.Module):
         # To preserve compatibility with Caffe weights `ceil_mode=True`
         # is used instead of `padding=1`.
         layer0_modules.append(('pool', nn.MaxPool2d(3, stride=2,
-                                                    ceil_mode=True)))
+                                                    padding=1)))
         self.layer0 = nn.Sequential(OrderedDict(layer0_modules))
         self.layer1 = self._make_layer(
             block,
